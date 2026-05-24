@@ -1,0 +1,12 @@
+{
+  "expectation_suite_name": "document_suite",
+  "expectations": [
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "text"
+      }
+    }
+  ],
+  "data_asset_type": "Dataset"
+}

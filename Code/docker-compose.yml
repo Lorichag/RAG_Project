@@ -1,0 +1,59 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: rag_db
+      POSTGRES_USER: rag_user
+      POSTGRES_PASSWORD: rag_password
+    ports:
+      - "5450:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_user -d rag_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9100:9000"
+      - "9101:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  chromadb:
+    image: chromadb/chroma:0.5.3
+    ports:
+      - "8100:8000"
+    volumes:
+      - chroma_data:/usr/src/app/.chromadb
+    # No healthcheck: chroma server routes vary between versions; keep container running
+  rag-api:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    ports:
+      - "8180:8000"
+    depends_on:
+      - postgres
+      - minio
+      - chromadb
+    env_file:
+      - .env
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+volumes:
+  postgres_data:
+  minio_data:
+  chroma_data:
