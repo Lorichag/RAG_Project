@@ -1,8 +1,10 @@
 from typing import Any, Dict, List
 import chromadb
 from chromadb.config import Settings
-from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+import structlog
 from app.config import settings
+
+logger = structlog.get_logger()
 
 
 class VectorStore:
@@ -11,7 +13,6 @@ class VectorStore:
     def __init__(self):
         self.host = settings.chroma_host
         self.port = settings.chroma_port
-        self.embedding_function = SentenceTransformerEmbeddingFunction(model_name=settings.embedding_model)
         self.client = chromadb.Client(
             Settings(
                 chroma_api_impl="chromadb.api.fastapi.FastAPI",
@@ -19,28 +20,35 @@ class VectorStore:
                 chroma_server_http_port=self.port,
             )
         )
-        self.collection = self.client.get_or_create_collection(
-            name=self.COLLECTION_NAME,
-            embedding_function=self.embedding_function,
-        )
+        self.collection = self.client.get_or_create_collection(name=self.COLLECTION_NAME)
 
     def add_documents(self, ids: List[str], documents: List[str], metadatas: List[Dict[str, Any]]) -> None:
-        self.collection.add(ids=ids, documents=documents, metadatas=metadatas)
+        logger.info("Adding documents to vector store", count=len(ids))
+        self.collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
 
-    def query(self, query_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def query_embeddings(self, embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
         result = self.collection.query(
-            query_texts=[query_text],
+            query_embeddings=[embedding],
             n_results=top_k,
-            include=["documents", "distances", "metadatas"],
+            include=["documents", "distances", "metadatas", "ids"],
         )
         documents = result["documents"][0]
         distances = result["distances"][0]
         metadatas = result["metadatas"][0]
+        ids = result["ids"][0]
         return [
             {
+                "id": ids[i],
                 "text": documents[i],
                 "score": float(distances[i]),
                 "source": metadatas[i].get("source"),
+                "metadata": metadatas[i],
             }
             for i in range(len(documents))
         ]
+
+    def delete_documents(self, ids: List[str]) -> None:
+        if not ids:
+            return
+        logger.info("Deleting documents from vector store", count=len(ids))
+        self.collection.delete(ids=ids)

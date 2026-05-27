@@ -9,7 +9,7 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 def init_db() -> None:
-    from app.db_models import Document, DocumentChunk
+    from app.db_models import Document, DocumentChunk, IngestRun
 
     Base.metadata.create_all(bind=engine)
 
