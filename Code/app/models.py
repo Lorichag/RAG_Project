@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class HealthResponse(BaseModel):
@@ -49,7 +49,7 @@ class QueryResult(BaseModel):
     text: str
     score: float
     source: Optional[str]
-    metadata: Optional[Dict[str, str]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class QueryResponse(BaseModel):

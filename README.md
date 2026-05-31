@@ -1,39 +1,85 @@
 # RAG Knowledge Platform from Scratch
 
-Ce projet est un système Retrieval-Augmented Generation local qui utilise PostgreSQL, MinIO, ChromaDB et FastAPI.
+This project is a local Retrieval-Augmented Generation (RAG) system built with PostgreSQL, MinIO, ChromaDB, and FastAPI.
 
-## Structure du projet
+## Project structure
 
-- `app/` : application FastAPI et services métier
-- `dags/` : Airflow DAGs pour l'ingestion
-- `scripts/` : utilitaires de génération et validation
-- `expectations/` : suites Great Expectations
-- `ollama/` : scripts de gestion du modèle LLM
+- `app/`: FastAPI application and business logic
+- `dags/`: Airflow DAGs for ingestion orchestration
+- `scripts/`: utility scripts for seeding and querying
+- `expectations/`: Great Expectations validation suites
+- `ollama/`: scripts for managing the LLM model
 
-## Démarrage rapide
+## Quick start
 
-1. Copier `.env.example` en `.env` ou utiliser le fichier `.env` déjà présent.
-2. Installer les dépendances : `make setup`.
-   - Si `make` n'est pas disponible sur Windows, utilisez `.\setup.ps1`.
-3. Démarrer les services Docker : `docker compose up --build`.
-   - Sur Windows, utilisez `.\docker-up.ps1`.
-4. Lancer l'API localement (optionnel) : `make run-api`.
-   - Sur Windows sans `make`, utilisez `.\run-api.ps1`.
-5. Tester l'endpoint d'ingestion :
-   - `curl -X POST http://localhost:8180/ingest -H "Content-Type: application/json" -d "{\"document_name\":\"sample.txt\",\"content\":\"Ceci est un document de test.\"}"
-6. Tester l'endpoint de requête :
-   - `curl -X POST http://localhost:8180/query -H "Content-Type: application/json" -d "{\"query\":\"Que contient le document ?\"}"`
+1. Copy `.env.example` to `.env`, or use the existing `.env` file.
+   - If `rag-api` runs in Docker and Ollama is installed on the host, set `OLLAMA_HOST=http://host.docker.internal:11434`.
+2. Install dependencies: `make setup`.
+   - If `make` is not available on Windows, use `.\setup.ps1`.
+3. Start the Docker services: `docker compose up --build`.
+   - On Windows, use `.\docker-up.ps1`.
+4. Run the API locally (optional): `make run-api`.
+   - On Windows without `make`, use `.\run-api.ps1`.
+5. Test the ingest endpoint:
+   - `curl -X POST http://localhost:8180/ingest -H "Content-Type: application/json" -d "{\"document_name\":\"sample.txt\",\"content\":\"This is a test document.\"}`
+6. Test ingestion from MinIO `raw/` storage:
+   - `curl -X POST http://localhost:8180/ingest/raw -H "Content-Type: application/json" -d "{\"object_name\":\"sample.txt\"}`
+7. Ingest all pending raw documents:
+   - `curl -X POST http://localhost:8180/ingest/all`
+8. List ingestion runs:
+   - `curl http://localhost:8180/documents`
+9. Retrieve a specific run:
+   - `curl http://localhost:8180/documents/<run_id>`
+10. Delete an ingestion run:
+   - `curl -X DELETE http://localhost:8180/documents/<run_id>`
+11. Test the query endpoint:
+   - `curl -X POST http://localhost:8180/query -H "Content-Type: application/json" -d "{\"query\":\"What does the document contain?\"}"`
 
-## Objectifs
+## Goals
 
-- ingestion de documents
-- chunking et embeddings
-- indexation vecteur
-- requête RAG via FastAPI
+- document ingestion
+- chunking and embeddings
+- vector indexing
+- RAG query support via FastAPI
 
-## Prochaines étapes
+## Next steps
 
-- implémenter `app/config.py`
-- créer le schéma PostgreSQL
-- ajouter le pipeline d'ingestion
-- configurer Docker Compose
+- implement `app/config.py`
+- create the PostgreSQL schema
+- add the ingestion pipeline
+- configure Docker Compose
+
+## Design choices
+
+1. Chunking Strategy
+Question: How do you split documents while preserving semantic meaning?
+
+Answer: Hybrid (recommended)
+Reasoning: The hybrid approach starts with sentence-based chunking to preserve semantic boundaries, then falls back to character-based splitting when sentences are too long or exceed the target chunk size. This balances quality and consistency for retrieval.
+
+2. Vector Storage
+Question: ChromaDB vs PostgreSQL pgvector for vector storage?
+
+Answer: Hybrid (recommended)
+Reasoning: Use ChromaDB for vector retrieval and PostgreSQL for metadata and ingestion tracking. This provides a purpose-built similarity search engine while keeping document and run metadata in the existing relational store.
+
+3. Embedding Model
+Question: Which embedding model to use?
+
+Answer: all-MiniLM-L6-v2 (recommended)
+Reasoning: `all-MiniLM-L6-v2` is fast, efficient, and good quality for general semantic search, making it suitable for local RAG workloads without excessive compute cost.
+
+4. LLM Integration
+Question: Ollama, OpenAI, Hugging Face?
+
+Answer: Ollama (recommended)
+Reasoning: Ollama enables local inference with no API costs and is ideal for educational and offline development setups. It avoids external dependency while still supporting useful local generation.
+
+5. Airflow vs Alternatives
+Question: Is Airflow the right orchestration tool?
+
+Answer: Airflow (recommended)
+Reasoning: Airflow is powerful, widely adopted, and provides strong scheduling, monitoring, and retry capabilities. It also delivers valuable learning experience for production-style data workflows.
+
+
+Project carried out by Loric Hagard

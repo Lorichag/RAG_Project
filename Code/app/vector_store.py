@@ -30,15 +30,15 @@ class VectorStore:
         result = self.collection.query(
             query_embeddings=[embedding],
             n_results=top_k,
-            include=["documents", "distances", "metadatas", "ids"],
+            include=["documents", "distances", "metadatas"],
         )
         documents = result["documents"][0]
         distances = result["distances"][0]
         metadatas = result["metadatas"][0]
-        ids = result["ids"][0]
+        ids = result.get("ids", [[]])[0]
         return [
             {
-                "id": ids[i],
+                "id": ids[i] if i < len(ids) else None,
                 "text": documents[i],
                 "score": float(distances[i]),
                 "source": metadatas[i].get("source"),

@@ -10,16 +10,16 @@ class GenerationService:
 
     def answer(self, question: str, context: str, sources: list[str]) -> dict:
         system_prompt = (
-            "Réponds à la question en utilisant uniquement le contexte fourni. "
-            "Si la réponse n'est pas dans le contexte, dis que l'information n'est pas disponible."
+            "Answer the question using only the provided context. "
+            "If the answer is not in the context, state that the information is not available."
         )
 
         prompt = (
             f"SYSTEM: {system_prompt}\n\n"
-            f"CONTEXTE:\n{context}\n\n"
+            f"CONTEXT:\n{context}\n\n"
             f"QUESTION: {question}\n\n"
-            f"CITES: {', '.join(sources)}\n\n"
-            "RÉPONSE :"
+            f"SOURCES: {', '.join(sources)}\n\n"
+            "ANSWER:"
         )
 
         url = f"{self.ollama_host}/api/generate"
@@ -42,7 +42,7 @@ class GenerationService:
             elif "completion" in data:
                 output = data.get("completion", "")
             return {
-                "answer": output or "Aucune réponse générée.",
+                "answer": output or "No answer generated.",
                 "model": self.model_name,
                 "prompt_tokens": data.get("usage", {}).get("prompt_tokens"),
                 "completion_tokens": data.get("usage", {}).get("completion_tokens"),
@@ -51,7 +51,7 @@ class GenerationService:
             }
         except RequestException as exc:
             return {
-                "answer": f"Erreur de génération : {exc}",
+                "answer": f"Generation error: {exc}",
                 "model": self.model_name,
                 "sources": sources,
             }

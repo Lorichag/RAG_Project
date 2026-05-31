@@ -19,12 +19,18 @@ class EmbeddingService:
 
     def embed_text(self, text: str) -> List[float]:
         embeddings = self.model.encode([text], convert_to_numpy=False)
-        return embeddings[0]
+        vector = embeddings[0]
+        if hasattr(vector, 'tolist'):
+            return vector.tolist()
+        return vector
 
     def embed_batch(self, texts: List[str]) -> List[List[float]]:
         if not texts:
             return []
-        return self.model.encode(texts, convert_to_numpy=False).tolist()
+        embeddings = self.model.encode(texts, convert_to_numpy=False)
+        if hasattr(embeddings, 'tolist'):
+            return embeddings.tolist()
+        return [item.tolist() if hasattr(item, 'tolist') else item for item in embeddings]
 
     def chunk_text(
         self,

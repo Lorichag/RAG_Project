@@ -91,7 +91,7 @@ def health_check() -> HealthResponse:
 def ingest_document(request: IngestRequest) -> IngestResult:
     pipeline: IngestPipeline = app.state.ingest_pipeline
     if pipeline is None:
-        raise HTTPException(status_code=500, detail="Pipeline non initialisé")
+        raise HTTPException(status_code=500, detail="Pipeline not initialized")
     return pipeline.ingest_document(request.document_name, request.content)
 
 
@@ -99,7 +99,7 @@ def ingest_document(request: IngestRequest) -> IngestResult:
 def ingest_raw_document(request: IngestObjectRequest) -> IngestResult:
     pipeline: IngestPipeline = app.state.ingest_pipeline
     if pipeline is None:
-        raise HTTPException(status_code=500, detail="Pipeline non initialisé")
+        raise HTTPException(status_code=500, detail="Pipeline not initialized")
     return pipeline.run_document(request.object_name)
 
 
@@ -107,7 +107,7 @@ def ingest_raw_document(request: IngestObjectRequest) -> IngestResult:
 def ingest_all_documents() -> BatchIngestResponse:
     pipeline: IngestPipeline = app.state.ingest_pipeline
     if pipeline is None:
-        raise HTTPException(status_code=500, detail="Pipeline non initialisé")
+        raise HTTPException(status_code=500, detail="Pipeline not initialized")
     pending = pipeline.list_pending_documents()
     ingested: List[IngestResult] = []
     for object_name in pending:
@@ -142,7 +142,7 @@ def get_document_run(run_id: str) -> DocumentRun:
     with SessionLocal() as session:
         run = session.get(IngestRun, run_id)
         if not run:
-            raise HTTPException(status_code=404, detail="Run non trouvée")
+            raise HTTPException(status_code=404, detail="Run not found")
         return DocumentRun(
             id=run.id,
             object_name=run.object_name,
@@ -160,7 +160,7 @@ def delete_document_run(run_id: str) -> dict:
     with SessionLocal() as session:
         run = session.get(IngestRun, run_id)
         if not run:
-            raise HTTPException(status_code=404, detail="Run non trouvée")
+            raise HTTPException(status_code=404, detail="Run not found")
 
         chunks = session.query(DocumentChunk).filter(DocumentChunk.run_id == run_id).all()
         chunk_ids = [chunk.id for chunk in chunks]
@@ -181,11 +181,11 @@ def query_document(request: QueryRequest) -> QueryResponse:
     retrieval_service: RetrievalService = app.state.retrieval_service
     generation_service: GenerationService = app.state.generation_service
     if retrieval_service is None or generation_service is None:
-        raise HTTPException(status_code=500, detail="Services non initialisés")
+        raise HTTPException(status_code=500, detail="Services not initialized")
 
     results = retrieval_service.search(request.query, top_k=request.top_k)
     if not results:
-        raise HTTPException(status_code=404, detail="Aucun document pertinent trouvé")
+        raise HTTPException(status_code=404, detail="No relevant documents found")
 
     context = retrieval_service.format_context(results)
     sources = [item.get("source") or "unknown" for item in results]
